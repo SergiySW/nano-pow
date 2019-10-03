@@ -1,9 +1,11 @@
 #pragma once
 
+#include <iostream>
+
+#if NANO_POW_OPENCL
 #include <nano_pow/driver.hpp>
 #include <nano_pow/opencl.hpp>
 
-#include <iostream>
 #include <vector>
 
 namespace nano_pow
@@ -135,3 +137,17 @@ private:
 	static unsigned constexpr max_slabs{ 4 };
 };
 }
+#else
+namespace nano_pow
+{
+	class opencl_driver;
+	class OCLDriverException : public std::exception
+	{
+	public:
+		void print (std::ostream & stream) const
+		{
+			stream << what () << std::endl;
+		}
+	};
+}
+#endif

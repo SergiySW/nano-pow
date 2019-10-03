@@ -86,6 +86,14 @@ uint64_t profile_validate (uint64_t count)
 	std::cout << "Average validation time: " << std::to_string (average) << " ns (" << std::to_string (static_cast<unsigned> (count * 1e9 / total_time)) << " validations/s)" << std::endl;
 	return average;
 }
+bool opencl_enabled ()
+{
+#if NANO_POW_OPENCL
+	return true;
+#else
+	return false;
+#endif
+}
 void tune (nano_pow::driver * driver_a, nano_pow::uint128_t difficulty, unsigned const count, size_t const initial_threads, size_t const initial_memory)
 {
 	driver_a->difficulty_set (difficulty);
@@ -97,7 +105,7 @@ void tune (nano_pow::driver * driver_a, nano_pow::uint128_t difficulty, unsigned
 			std::cerr << "Tuning results:\nRecommended memory\t" << nano_pow::to_megabytes (best_memory) << "MB" << std::endl;
 		}
 	}
-	else if (driver_a->type () == nano_pow::driver_type::OPENCL)
+	else if (driver_a->type () == nano_pow::driver_type::OPENCL && opencl_enabled ())
 	{
 		size_t max_memory{ 0 }, best_memory{ 0 }, best_threads{ 0 };
 		if (!nano_pow::tune (*reinterpret_cast<nano_pow::opencl_driver *> (driver_a), count, initial_memory, initial_threads, max_memory, best_memory, best_threads, std::cerr))
@@ -115,9 +123,10 @@ void tune (nano_pow::driver * driver_a, nano_pow::uint128_t difficulty, unsigned
 int main (int argc, char ** argv)
 {
 	cxxopts::Options options ("nano_pow_driver", "Command line options");
+	std::string available_drivers (opencl_enabled () ? "cpp|opencl" : "cpp");
 	options.add_options ()
 	// clang-format off
-		("driver", "Specify which test driver to use", cxxopts::value<std::string>()->default_value("cpp"), "cpp|opencl")
+		("driver", "Specify which test driver to use", cxxopts::value<std::string>()->default_value("cpp"), available_drivers)
 		("operation", "Specify which driver operation to perform", cxxopts::value<std::string>()->default_value("gtest"), "gtest|dump|profile|profile_validation|tune")
 		("d,difficulty", "Solution difficulty 1-127 default: 52", cxxopts::value<unsigned>()->default_value("52"))
 		("t,threads", "Number of device threads to use to find solution", cxxopts::value<unsigned>())
@@ -146,6 +155,7 @@ int main (int argc, char ** argv)
 			{
 				driver = std::make_unique<nano_pow::cpp_driver> ();
 			}
+#if NANO_POW_OPENCL
 			else if (driver_type == "opencl")
 			{
 				unsigned short platform (0);
@@ -161,9 +171,10 @@ int main (int argc, char ** argv)
 				bool initialize{ operation != "dump" };
 				driver = std::make_unique<nano_pow::opencl_driver> (platform, device, initialize);
 			}
+#endif
 			else
 			{
-				std::cerr << "Invalid driver. Available: {cpp, opencl}" << std::endl;
+				std::cerr << "Invalid driver. Available: {cpp" << (opencl_enabled () ? ", opencl}" : "}") << std::endl;
 			}
 			if (driver != nullptr && result)
 			{

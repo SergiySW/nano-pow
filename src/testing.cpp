@@ -33,6 +33,7 @@ TEST (cpp_driver, solve)
 	ASSERT_FALSE (nano_pow::passes (nonce, result, failing_difficulty));
 }
 
+#if NANO_POW_OPENCL
 TEST (opencl_driver, solve)
 {
 	bool opencl_available{ true };
@@ -58,3 +59,5 @@ TEST (opencl_driver, solve)
 		ASSERT_FALSE (nano_pow::passes (nonce, result, nano_pow::bit_difficulty (70)));
 	}
 }
+#endif
+

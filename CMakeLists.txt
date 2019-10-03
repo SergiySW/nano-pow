@@ -11,12 +11,13 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(NANO_POW_OPENCL "Enable compiling with OpenCL headers" ON)
+
 if (NOT WIN32)
 	add_compile_options(-Wall -Wextra -pedantic)
 endif ()
 
 if (APPLE)
-	set (PLATFORM_LINK_FLAGS "-framework OpenCL")
 	SET( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${PLATFORM_LINK_FLAGS}" )
 else ()
 	if (WIN32)
@@ -24,19 +25,32 @@ else ()
 	else ()
 		set (PLATFORM_LINK_FLAGS "-static-libgcc -static-libstdc++")
 	endif ()
-	find_package (OpenCL REQUIRED)
-	include_directories (${OpenCL_INCLUDE_DIRS})
-	link_directories (${OpenCL_LIBRARY})
 endif ()
 
-add_custom_command (
-	OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/opencl_program.cpp
-	MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/src/opencl_program.cl
-	WORKING_DIRECTORY  ${CMAKE_CURRENT_SOURCE_DIR}/src
-	COMMAND ${CMAKE_COMMAND} -DCL_FILE=opencl_program.cl -DCPP_FILE=opencl_program.cpp -P "${CMAKE_CURRENT_SOURCE_DIR}/ConvertOpenCL.cmake"
-	COMMENT "Generating OpenCL source file"
-	VERBATIM
-)
+if (NANO_POW_OPENCL)
+	add_definitions(-DNANO_POW_OPENCL=1)
+	if (APPLE)
+		set (PLATFORM_LINK_FLAGS "-framework OpenCL")
+	else ()
+		find_package (OpenCL REQUIRED)
+		include_directories (${OpenCL_INCLUDE_DIRS})
+		link_directories (${OpenCL_LIBRARY})
+	endif ()
+	add_custom_command (
+		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/opencl_program.cpp
+		MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/src/opencl_program.cl
+		WORKING_DIRECTORY  ${CMAKE_CURRENT_SOURCE_DIR}/src
+		COMMAND ${CMAKE_COMMAND} -DCL_FILE=opencl_program.cl -DCPP_FILE=opencl_program.cpp -P "${CMAKE_CURRENT_SOURCE_DIR}/ConvertOpenCL.cmake"
+		COMMENT "Generating OpenCL source file"
+		VERBATIM
+	)
+	set (OPENCL_SOURCE include/nano_pow/opencl.hpp
+					include/nano_pow/opencl_driver.hpp
+					src/opencl_driver.cpp
+					src/opencl_program.cpp)
+else ()
+	set (OPENCL_SOURCE "")
+endif ()
 
 if (${NANO_POW_TEST})
 	add_subdirectory (googletest/googletest)
@@ -53,12 +67,11 @@ include_directories (cxxopts/include)
 
 add_library (nano_pow
 	${PLATFORM_SOURCE}
+	${OPENCL_SOURCE}
 	include/nano_pow/conversions.hpp
 	include/nano_pow/cpp_driver.hpp
 	include/nano_pow/driver.hpp
 	include/nano_pow/memory.hpp
-	include/nano_pow/opencl.hpp
-	include/nano_pow/opencl_driver.hpp
 	include/nano_pow/plat.hpp
 	include/nano_pow/pow.hpp
 	include/nano_pow/tuning.hpp
@@ -67,8 +80,6 @@ add_library (nano_pow
 
 	src/cpp_driver.cpp
 	src/driver.cpp
-	src/opencl_driver.cpp
-	src/opencl_program.cpp
 	src/tuning.cpp
 )
 
@@ -83,6 +94,9 @@ if (${NANO_POW_TEST})
 
 	target_link_libraries (nano_pow_driver
 		gtest
-		nano_pow
-		${OpenCL_LIBRARY})
+		nano_pow)
+	if (NANO_POW_OPENCL)
+		target_link_libraries (nano_pow_driver
+			${OpenCL_LIBRARY})
+	endif ()
 endif ()

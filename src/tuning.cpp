@@ -20,12 +20,6 @@ bool nano_pow::tune (nano_pow::cpp_driver & driver_a, unsigned const count_a, si
 	return tune (driver_a, count_a, initial_memory_a, initial_threads_a, best_memory_a, oss);
 }
 
-bool nano_pow::tune (nano_pow::opencl_driver & driver_a, unsigned const count_a, size_t const initial_memory_a, size_t const initial_threads_a, size_t & max_memory_a, size_t & best_memory_a, size_t & best_threads_a)
-{
-	std::ostringstream oss;
-	return tune (driver_a, count_a, initial_memory_a, initial_threads_a, max_memory_a, best_memory_a, best_threads_a, oss);
-}
-
 bool nano_pow::tune (nano_pow::cpp_driver & driver_a, unsigned const count_a, size_t const initial_memory_a, size_t const initial_threads_a, size_t & best_memory_a, std::ostream & stream)
 {
 	bool error{ false };
@@ -108,6 +102,14 @@ bool nano_pow::tune (nano_pow::cpp_driver & driver_a, unsigned const count_a, si
 	}
 	stream << "Found best memory " << nano_pow::to_megabytes (best_memory_a) << "MB" << std::endl;
 	return false;
+}
+
+
+#if NANO_POW_OPENCL
+bool nano_pow::tune (nano_pow::opencl_driver & driver_a, unsigned const count_a, size_t const initial_memory_a, size_t const initial_threads_a, size_t & max_memory_a, size_t & best_memory_a, size_t & best_threads_a)
+{
+	std::ostringstream oss;
+	return tune (driver_a, count_a, initial_memory_a, initial_threads_a, max_memory_a, best_memory_a, best_threads_a, oss);
 }
 
 bool nano_pow::tune (nano_pow::opencl_driver & driver_a, unsigned const count_a, size_t const initial_memory_a, size_t const initial_threads_a, size_t & max_memory_a, size_t & best_memory_a, size_t & best_threads_a, std::ostream & stream)
@@ -226,3 +228,4 @@ bool nano_pow::tune (nano_pow::opencl_driver & driver_a, unsigned const count_a,
 
 	return error;
 }
+#endif
